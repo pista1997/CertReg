@@ -103,6 +103,9 @@ export async function POST(request: NextRequest) {
     const errors = [];
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    // VYMAZAŤ VŠETKY EXISTUJÚCE ZÁZNAMY PRED IMPORTOM
+    await prisma.certificate.deleteMany({});
+
     for (let i = 0; i < records.length; i++) {
       const rec = records[i];
       const row = i + 2;
