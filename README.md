@@ -13,13 +13,13 @@ Certificate Registry je Next.js 14 aplikácia s TypeScript, ktorá umožňuje:
 
 ## 🛠️ Technológie
 
-- **Next.js 14** s App Router
+- **Next.js 15** s App Router
 - **TypeScript** pre type-safe kód
 - **SQLite** databáza
 - **Prisma ORM** pre databázové operácie
 - **Tailwind CSS** pre styling
-- **Nodemailer** pre odosielanie emailov
-- **XLSX** pre prácu s Excel súbormi
+- **Nodemailer 7** pre odosielanie emailov
+- **XLSX 0.20** pre prácu s Excel súbormi
 - **date-fns** pre prácu s dátumami
 
 ## 📋 Požiadavky
@@ -370,6 +370,36 @@ vercel
 ```
 
 **Poznámka:** SQLite databáza nie je vhodná pre Vercel (read-only filesystem). Odporúčame prejsť na PostgreSQL.
+
+## 🔒 Bezpečnosť
+
+### Známe zraniteľnosti a ich mitigácia
+
+#### xlsx knižnica (Prototype Pollution, ReDoS)
+Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je k dispozícii opravená verzia.
+
+**Mitigačné opatrenia:**
+- Import súborov by mal byť prístupný len autentifikovaným používateľom
+- Obmedziť veľkosť nahrávaných súborov (odporúčame max 5MB)
+- Monitorovať a obmedziť frekvenciu importov v produkcii
+- Zvážiť alternatívne riešenia pre produkčné prostredie:
+  - Použiť CSV parser namiesto xlsx (napr. `csv-parse`)
+  - Implementovať server-side sandbox pre spracovanie súborov
+  - Použiť dedikované API služby pre spracovanie Excel súborov
+
+#### Next.js a nodemailer
+- ✅ **Next.js aktualizovaný na v15.0.8+** (opravené DoS zraniteľnosti)
+- ✅ **nodemailer aktualizovaný na v7.0.7+** (opravené email domain issues)
+
+### Odporúčania pre bezpečnú prevádzku
+
+1. **Autentifikácia**: Pridajte autentifikáciu pre prístup k aplikácii
+2. **Rate limiting**: Implementujte rate limiting pre API endpoints
+3. **File size limits**: Obmedziť veľkosť nahrávaných súborov
+4. **Input validation**: Všetky vstupy sú validované, udržiavajte túto prax
+5. **HTTPS**: Vždy používajte HTTPS v produkcii
+6. **Environment variables**: Uchovávajte citlivé údaje v bezpečnom úložisku
+7. **Regular updates**: Pravidelne aktualizujte závislosti
 
 ## 🤝 Prispievanie
 

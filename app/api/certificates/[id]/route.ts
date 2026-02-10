@@ -7,9 +7,10 @@ import { prisma } from '@/lib/db';
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const id = parseInt(params.id);
 
     // Kontrola či ID je číslo
@@ -56,9 +57,10 @@ export async function DELETE(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const id = parseInt(params.id);
     const body = await request.json();
     const { name, expiryDate, emailAddress } = body;
