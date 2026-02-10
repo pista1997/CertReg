@@ -343,6 +343,37 @@ npm run build
 
 ## 📦 Produkčné nasadenie
 
+### ⚠️ DÔLEŽITÉ: Výber importnej metódy
+
+Aplikácia poskytuje **DYE možnosti** pre import certifikátov:
+
+#### 1. **CSV-only Import** (ODPORÚČANÉ pre produkciu) ✅
+- **Endpoint**: `POST /api/certificates/import-csv`
+- **Formát**: Iba `.csv` súbory
+- **Bezpečnosť**: ✅ Bez známych zraniteľností
+- **Knižnica**: `csv-parse` (bezpečná, aktívne udržiavaná)
+- **Status**: **Plne bezpečné riešenie**
+
+#### 2. **Excel/CSV Import** (S obmedzeným rizikom) ⚠️
+- **Endpoint**: `POST /api/certificates/import`
+- **Formát**: `.xlsx`, `.xls`, `.csv` súbory
+- **Bezpečnosť**: ⚠️ xlsx má známe zraniteľnosti (mitigované runtime ochranami)
+- **Knižnica**: `xlsx` + ochranné vrstvy
+- **Status**: **Použiteľné s 6-vrstvovou ochranou, ale nie 100% bezpečné**
+
+### 🎯 Odporúčania
+
+**Pre produkčné prostredie:**
+1. ✅ Používajte **CSV-only import** (`/api/certificates/import-csv`)
+2. ✅ Exportujte Excel súbory do CSV pred importom
+3. ✅ V UI uprednostnite CSV upload pred Excel uploadom
+
+**Ak MUSÍTE podporovať Excel:**
+- Implementujte autentifikáciu a autorizáciu
+- Nastavte rate limiting (napr. 10 importov/hod na používateľa)
+- Monitorujte neúspešné pokusy o import
+- Pravidelne kontrolujte logy na podozrivé vzory
+
 ### Build aplikácie
 
 ```bash
@@ -373,10 +404,29 @@ vercel
 
 ## 🔒 Bezpečnosť
 
-### Známe zraniteľnosti a ich mitigácia
+### Známe zraniteľnosti a ich riešenie
 
-#### xlsx knižnica (Prototype Pollution, ReDoS)
+#### ✅ RIEŠENIE: CSV-only Import (Bez xlsx)
+
+**Nový bezpečný endpoint bez xlsx závislosti:**
+- **POST /api/certificates/import-csv** - Používa `csv-parse` knižnicu
+- **Žiadne známe zraniteľnosti**
+- **Odporúčané pre všetky produkčné nasadenia**
+- **Plná funkcionalita importu bez bezpečnostných rizík**
+
+#### ⚠️ xlsx knižnica (Prototype Pollution, ReDoS)
 Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je k dispozícii opravená verzia.
+
+**Stav:** Endpoint `/api/certificates/import` STÁLE používa xlsx pre Excel podporu.
+
+**Dve možnosti:**
+
+1. **ODPORÚČANÉ: Používajte CSV-only** (`/api/certificates/import-csv`)
+   - ✅ Žiadne zraniteľnosti
+   - ✅ Plne bezpečné
+   - ✅ Rovnaká funkcionalita
+
+2. **Ak potrebujete Excel:** Použite `/api/certificates/import` s implementovanými ochranami
 
 **Implementované ochranné opatrenia v kóde:**
 - ✅ **File size limit**: Maximum 5MB (hardcoded v API)
