@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Certificate Registry",
+  title: "CertReg IS OS SR",
   description: "Správa a monitoring certifikátov s automatickými email notifikáciami",
 };
 

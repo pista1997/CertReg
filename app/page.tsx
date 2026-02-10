@@ -100,8 +100,8 @@ export default function Home() {
       {/* Header */}
       <header className="bg-blue-600 text-white shadow-lg">
         <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold">📜 Certificate Registry</h1>
-          <p className="text-blue-100 mt-1">Správa a monitoring certifikátov</p>
+          <h1 className="text-3xl font-bold">📜 Register certifikátov</h1>
+          <p className="text-blue-100 mt-1">Správa a monitoring certifikátov informačných systémov OS SR</p>
         </div>
       </header>
 
@@ -109,11 +109,10 @@ export default function Home() {
       {toast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
           <div
-            className={`px-6 py-4 rounded-lg shadow-lg ${
-              toast.type === 'success'
-                ? 'bg-green-500 text-white'
-                : 'bg-red-500 text-white'
-            }`}
+            className={`px-6 py-4 rounded-lg shadow-lg ${toast.type === 'success'
+              ? 'bg-green-500 text-white'
+              : 'bg-red-500 text-white'
+              }`}
           >
             <div className="flex items-center">
               <span className="mr-2">{toast.type === 'success' ? '✅' : '❌'}</span>
