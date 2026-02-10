@@ -1,0 +1,41 @@
+{
+  "name": "certreg",
+  "version": "1.0.0",
+  "description": "Certificate Registry - Správa a monitoring certifikátov",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "@prisma/client": "^5.0.0",
+    "xlsx": "^0.18.5",
+    "nodemailer": "^6.9.0",
+    "date-fns": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/nodemailer": "^6.4.14",
+    "prisma": "^5.0.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pista1997/CertReg.git"
+  },
+  "author": "",
+  "license": "ISC"
+}
