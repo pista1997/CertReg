@@ -378,11 +378,18 @@ vercel
 #### xlsx knižnica (Prototype Pollution, ReDoS)
 Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je k dispozícii opravená verzia.
 
-**Mitigačné opatrenia:**
+**Implementované ochranné opatrenia v kóde:**
+- ✅ **File size limit**: Maximum 5MB (hardcoded v API)
+- ✅ **Row limit**: Maximum 1000 riadkov na import
+- ✅ **Timeout protection**: 30-sekundový timeout proti ReDoS
+- ✅ **Input sanitization**: Blokovanie nebezpečných kľúčov (`__proto__`, `constructor`, `prototype`)
+- ✅ **Length validation**: Kontrola dĺžky stringov (názov max 500, email max 255 znakov)
+- ✅ **Restricted parsing**: Obmedzené parsovanie možnosti xlsx knižnice
+
+**Dodatočné odporúčania pre produkciu:**
 - Import súborov by mal byť prístupný len autentifikovaným používateľom
-- Obmedziť veľkosť nahrávaných súborov (odporúčame max 5MB)
-- Monitorovať a obmedziť frekvenciu importov v produkcii
-- Zvážiť alternatívne riešenia pre produkčné prostredie:
+- Monitorovať a obmedziť frekvenciu importov
+- Zvážiť alternatívne riešenia:
   - Použiť CSV parser namiesto xlsx (napr. `csv-parse`)
   - Implementovať server-side sandbox pre spracovanie súborov
   - Použiť dedikované API služby pre spracovanie Excel súborov

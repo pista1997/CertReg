@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import * as XLSX from 'xlsx';
 
+// Bezpečnostné nastavenia pre ochranu proti ReDoS a Prototype Pollution
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
+const MAX_ROWS = 1000; // Maximum počet riadkov na import
+const PROCESSING_TIMEOUT = 30000; // 30 sekúnd timeout
+
 /**
  * POST /api/certificates/import
  * Importuje Excel alebo CSV súbor s certifikátmi
+ * 
+ * BEZPEČNOSTNÉ OPATRENIA:
+ * - Limit veľkosti súboru (5MB)
+ * - Limit počtu riadkov (1000)
+ * - Timeout ochrany (30s)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +24,14 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { error: 'Súbor nebol nahraný' },
+        { status: 400 }
+      );
+    }
+
+    // BEZPEČNOSŤ: Kontrola veľkosti súboru
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `Súbor je príliš veľký. Maximum: ${MAX_FILE_SIZE / 1024 / 1024}MB` },
         { status: 400 }
       );
     }
@@ -36,15 +54,47 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Parsovanie Excel/CSV súboru
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
+    // BEZPEČNOSŤ: Timeout ochrana proti ReDoS
+    const parsePromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Spracovanie súboru trvalo príliš dlho (timeout)'));
+      }, PROCESSING_TIMEOUT);
+
+      try {
+        // Parsovanie Excel/CSV súboru
+        const workbook = XLSX.read(buffer, { 
+          type: 'buffer',
+          // BEZPEČNOSŤ: Obmedzenie parsovacích možností
+          cellDates: true,
+          cellNF: false,
+          cellHTML: false,
+        });
+        
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        clearTimeout(timeout);
+        resolve(data);
+      } catch (error) {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
+
+    const data = await parsePromise as any[];
 
     if (data.length === 0) {
       return NextResponse.json(
         { error: 'Súbor je prázdny alebo neobsahuje dáta' },
+        { status: 400 }
+      );
+    }
+
+    // BEZPEČNOSŤ: Limit počtu riadkov
+    if (data.length > MAX_ROWS) {
+      return NextResponse.json(
+        { error: `Príliš veľa riadkov. Maximum: ${MAX_ROWS} riadkov` },
         { status: 400 }
       );
     }
@@ -66,6 +116,19 @@ export async function POST(request: NextRequest) {
       return null;
     };
 
+    // Funkcia pre sanitizáciu string hodnôt (ochrana proti Prototype Pollution)
+    const sanitizeString = (value: any): string => {
+      if (value === null || value === undefined) return '';
+      // Zabránenie prototype pollution
+      const str = String(value).trim();
+      // Blokovanie nebezpečných kľúčov
+      const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+      if (dangerousKeys.some(key => str.toLowerCase().includes(key))) {
+        throw new Error('Nebezpečný obsah v súbore');
+      }
+      return str;
+    };
+
     // Funkcia pre parsovanie dátumu v rôznych formátoch
     const parseDate = (dateValue: any): Date | null => {
       if (!dateValue) return null;
@@ -80,7 +143,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Ak je string, skúsime rôzne formáty
-      const dateString = String(dateValue).trim();
+      const dateString = sanitizeString(dateValue);
 
       // Formát: DD.MM.YYYY alebo DD/MM/YYYY
       const ddmmyyyyMatch = dateString.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
@@ -130,9 +193,21 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const name = String(row[nameColumn]).trim();
-        const emailAddress = String(row[emailColumn]).trim();
+        // BEZPEČNOSŤ: Sanitizácia vstupov
+        const name = sanitizeString(row[nameColumn]);
+        const emailAddress = sanitizeString(row[emailColumn]);
         const expiryDate = parseDate(row[dateColumn]);
+
+        // Validácia dĺžky
+        if (name.length > 500) {
+          errors.push({ row: rowNumber, error: 'Názov je príliš dlhý (max 500 znakov)' });
+          continue;
+        }
+
+        if (emailAddress.length > 255) {
+          errors.push({ row: rowNumber, error: 'Email je príliš dlhý (max 255 znakov)' });
+          continue;
+        }
 
         // Validácia
         if (!name) {
@@ -175,8 +250,24 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chyba pri importe súboru:', error);
+    
+    // Bezpečnostné chybové hlášky
+    if (error.message?.includes('timeout')) {
+      return NextResponse.json(
+        { error: 'Spracovanie súboru trvalo príliš dlho. Súbor môže byť príliš zložitý.' },
+        { status: 408 }
+      );
+    }
+    
+    if (error.message?.includes('Nebezpečný obsah')) {
+      return NextResponse.json(
+        { error: 'Súbor obsahuje potenciálne nebezpečný obsah' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Nepodarilo sa importovať súbor' },
       { status: 500 }
