@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mapovanie stĺpcov (podporuje rôzne názvy)
+    // Mapovanie stĺpcov (podporuje rôzne názvy a encoding problémy)
     const columnMappings = {
-      name: ['názov', 'name', 'nazov', 'Názov', 'Name'],
-      expiryDate: ['dátum_platnosti', 'datum_platnosti', 'expiry_date', 'expiryDate', 'dátum platnosti', 'datum platnosti'],
+      name: ['názov', 'name', 'nazov', 'Názov', 'Name', 'nÃ¡zov', 'nÃ¡zov'],
+      expiryDate: ['dátum_platnosti', 'datum_platnosti', 'expiry_date', 'expiryDate', 'dátum platnosti', 'datum platnosti', 'dÃ¡tum_platnosti', 'dÃ¡tum platnosti'],
       emailAddress: ['email', 'email_address', 'emailAddress', 'Email'],
     };
 
