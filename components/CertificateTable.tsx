@@ -34,7 +34,7 @@ export default function CertificateTable({
     if (daysRemaining < 0) {
       return { label: 'Expirovaný', color: 'bg-red-100 text-red-800', icon: '❌' };
     } else if (daysRemaining <= 30) {
-      return { label: 'Exspiruje čoskoro', color: 'bg-orange-100 text-orange-800', icon: '⚠️' };
+      return { label: 'Expiruje čoskoro', color: 'bg-orange-100 text-orange-800', icon: '⚠️' };
     } else {
       return { label: 'Aktívny', color: 'bg-green-100 text-green-800', icon: '✅' };
     }
@@ -52,7 +52,7 @@ export default function CertificateTable({
 
     const status = getStatus(cert.expiryDate);
     if (filter === 'active') return status.label === 'Aktívny';
-    if (filter === 'expiring') return status.label === 'Exspiruje čoskoro';
+    if (filter === 'expiring') return status.label === 'Expiruje čoskoro';
     if (filter === 'expired') return status.label === 'Expirovaný';
 
     return true;
@@ -80,7 +80,7 @@ export default function CertificateTable({
           >
             <option value="all">Všetky</option>
             <option value="active">Aktívne</option>
-            <option value="expiring">Exspirujú čoskoro</option>
+            <option value="expiring">Expirujú čoskoro</option>
             <option value="expired">Expirované</option>
           </select>
         </div>

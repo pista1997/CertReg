@@ -7,8 +7,8 @@ Webová aplikácia pre správu a monitoring certifikátov s automatickými email
 Certificate Registry je Next.js 14 aplikácia s TypeScript, ktorá umožňuje:
 - **Správu certifikátov** - pridávanie, editácia a mazanie certifikátov
 - **Import z Excel/CSV** - hromadné nahrávanie certifikátov zo súborov
-- **Automatické notifikácie** - email upozornenia na certifikáty exspirujúce do 30 dní
-- **Prehľadné zobrazenie** - farebné kódovanie statusov (aktívny, exspiruje čoskoro, expirovaný)
+- **Automatické notifikácie** - email upozornenia na certifikáty expirujúce do 30 dní
+- **Prehľadné zobrazenie** - farebné kódovanie statusov (aktívny, expiruje čoskoro, expirovaný)
 - **Vyhľadávanie a filtrovanie** - rýchle nájdenie potrebných certifikátov
 
 ## 🛠️ Technológie
@@ -136,13 +136,13 @@ Súbor musí obsahovať tieto stĺpce:
 
 ### Farebné kódovanie statusov
 
-- 🟢 **Zelená (Aktívny)** - certifikát exspiruje o viac ako 30 dní
-- 🟠 **Oranžová (Exspiruje čoskoro)** - certifikát exspiruje do 30 dní
+- 🟢 **Zelená (Aktívny)** - certifikát expiruje o viac ako 30 dní
+- 🟠 **Oranžová (Expiruje čoskoro)** - certifikát expiruje do 30 dní
 - 🔴 **Červená (Expirovaný)** - certifikát už expiroval
 
 ## 📧 Automatická kontrola certifikátov
 
-Aplikácia poskytuje endpoint pre kontrolu exspirujúcich certifikátov a odoslanie email notifikácií:
+Aplikácia poskytuje endpoint pre kontrolu expirujúcich certifikátov a odoslanie email notifikácií:
 
 ```
 GET http://localhost:3000/api/certificates/check-expiry
@@ -242,7 +242,7 @@ Importuje certifikáty z Excel/CSV súboru.
 **Content-Type:** `multipart/form-data`
 
 ### GET /api/certificates/check-expiry
-Kontroluje exspirujúce certifikáty a odošle email notifikácie.
+Kontroluje expirujúce certifikáty a odošle email notifikácie.
 
 ## 🗂️ Štruktúra projektu
 
