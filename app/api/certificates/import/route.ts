@@ -174,6 +174,9 @@ export async function POST(request: NextRequest) {
     // Validácia emailovej adresy
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    // VYMAZAŤ VŠETKY EXISTUJÚCE ZÁZNAMY PRED IMPORTOM
+    await prisma.certificate.deleteMany({});
+
     // Spracovanie každého riadku
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i];
