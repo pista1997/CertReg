@@ -33,16 +33,16 @@ export async function POST(request: NextRequest) {
     const { name, expiryDate, emailAddress } = body;
 
     // Validácia vstupných údajov
-    if (!name || !expiryDate || !emailAddress) {
+    if (!name || !expiryDate) {
       return NextResponse.json(
-        { error: 'Všetky polia sú povinné' },
+        { error: 'Názov a dátum expirácie sú povinné' },
         { status: 400 }
       );
     }
 
-    // Validácia emailovej adresy
+    // Validácia emailovej adresy (ak je vyplnený)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(emailAddress)) {
+    if (emailAddress && emailAddress.trim() && !emailRegex.test(emailAddress)) {
       return NextResponse.json(
         { error: 'Neplatná emailová adresa' },
         { status: 400 }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         expiryDate: new Date(expiryDate),
-        emailAddress,
+        emailAddress: emailAddress && emailAddress.trim() ? emailAddress.trim() : null,
       },
     });
 

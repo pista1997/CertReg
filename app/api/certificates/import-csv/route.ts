@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const text = await file.text();
-    
+
     let records: any[];
     try {
       records = parse(text, {
@@ -88,13 +88,13 @@ export async function POST(request: NextRequest) {
     const parseDate = (value: any): Date | null => {
       if (!value) return null;
       const str = sanitize(value);
-      
+
       let match = str.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
       if (match) return new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
-      
+
       match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
       if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-      
+
       const d = new Date(str);
       return !isNaN(d.getTime()) ? d : null;
     };
@@ -115,13 +115,22 @@ export async function POST(request: NextRequest) {
         const dateCol = findColumn(rec, columnMappings.expiryDate);
         const emailCol = findColumn(rec, columnMappings.emailAddress);
 
-        if (!nameCol || !dateCol || !emailCol) {
-          errors.push({ row, error: 'Chýbajúce stĺpce' });
+        if (!nameCol || !dateCol) {
+          errors.push({ row, error: 'Chýbajúce stĺpce (názov, dátum)' });
           continue;
         }
 
         const name = sanitize(rec[nameCol]);
-        const email = sanitize(rec[emailCol]);
+        let email: string | null = null;
+
+        // Spracovanie emailu - môže byť prázdny alebo "EMPTY"
+        if (emailCol && rec[emailCol]) {
+          const rawEmail = sanitize(rec[emailCol]);
+          if (rawEmail && rawEmail.toUpperCase() !== 'EMPTY') {
+            email = rawEmail;
+          }
+        }
+
         const date = parseDate(rec[dateCol]);
 
         if (!name || name.length > 500) {
@@ -129,7 +138,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        if (!email || email.length > 255 || !emailRegex.test(email)) {
+        if (email && (email.length > 255 || !emailRegex.test(email))) {
           errors.push({ row, error: 'Neplatný email' });
           continue;
         }

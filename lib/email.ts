@@ -19,10 +19,15 @@ interface EmailData {
   recipientEmail: string;
 }
 
+interface EmailResult {
+  success: boolean;
+  error?: string;
+}
+
 /**
  * Funkcia pre odoslanie email notifikácie o expirácii certifikátu
  */
-export async function sendExpiryNotification(data: EmailData): Promise<boolean> {
+export async function sendExpiryNotification(data: EmailData): Promise<EmailResult> {
   const { certificateName, expiryDate, daysRemaining, recipientEmail } = data;
 
   // Formátovanie dátumu na slovenský formát
@@ -100,10 +105,11 @@ Certificate Registry System
     });
 
     console.log(`Email notifikácia úspešne odoslaná na: ${recipientEmail}`);
-    return true;
-  } catch (error) {
+    return { success: true };
+  } catch (error: any) {
     console.error('Chyba pri odosielaní emailu:', error);
-    return false;
+    const errorMessage = error?.message || error?.toString() || 'Neznáma chyba';
+    return { success: false, error: errorMessage };
   }
 }
 

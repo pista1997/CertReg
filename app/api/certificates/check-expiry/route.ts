@@ -11,7 +11,7 @@ export async function GET() {
   try {
     // Aktuálny dátum
     const now = new Date();
-    
+
     // Dátum o 30 dní
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -23,6 +23,9 @@ export async function GET() {
           lte: thirtyDaysFromNow, // Menej alebo rovné ako 30 dní
         },
         notificationSent: false, // Ešte nebola odoslaná notifikácia
+        emailAddress: {
+          not: null, // Iba certifikáty s emailovou adresou
+        },
       },
     });
 
@@ -45,14 +48,14 @@ export async function GET() {
 
       try {
         // Odoslanie email notifikácie
-        const emailSent = await sendExpiryNotification({
+        const emailResult = await sendExpiryNotification({
           certificateName: certificate.name,
           expiryDate: certificate.expiryDate,
           daysRemaining: daysRemaining,
-          recipientEmail: certificate.emailAddress,
+          recipientEmail: certificate.emailAddress!,
         });
 
-        if (emailSent) {
+        if (emailResult.success) {
           // Označenie notifikácie ako odoslanej
           await prisma.certificate.update({
             where: { id: certificate.id },
@@ -75,9 +78,10 @@ export async function GET() {
             status: 'failed',
             email: certificate.emailAddress,
             daysRemaining,
+            error: emailResult.error || 'Neznáma chyba',
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Chyba pri odosielaní notifikácie pre certifikát ${certificate.id}:`, error);
         failureCount++;
         results.push({
@@ -86,7 +90,7 @@ export async function GET() {
           status: 'error',
           email: certificate.emailAddress,
           daysRemaining,
-          error: 'Chyba pri odosielaní emailu',
+          error: error?.message || error?.toString() || 'Chyba pri odosielaní emailu',
         });
       }
     }

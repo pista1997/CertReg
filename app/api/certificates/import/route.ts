@@ -62,14 +62,14 @@ export async function POST(request: NextRequest) {
 
       try {
         // Parsovanie Excel/CSV súboru
-        const workbook = XLSX.read(buffer, { 
+        const workbook = XLSX.read(buffer, {
           type: 'buffer',
           // BEZPEČNOSŤ: Obmedzenie parsovacích možností
           cellDates: true,
           cellNF: false,
           cellHTML: false,
         });
-        
+
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(worksheet);
@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
 
     // Mapovanie stĺpcov (podporuje rôzne názvy a encoding problémy)
     const columnMappings = {
-      name: ['názov', 'name', 'nazov', 'Názov', 'Name', 'nÃ¡zov', 'nÃ¡zov'],
-      expiryDate: ['dátum_platnosti', 'datum_platnosti', 'expiry_date', 'expiryDate', 'dátum platnosti', 'datum platnosti', 'dÃ¡tum_platnosti', 'dÃ¡tum platnosti'],
+      name: ['názov', 'name', 'nazov', 'Názov', 'Name', 'nÃ¡zov', 'nÃ¡zov', "CN"],
+      expiryDate: ['dátum_platnosti', 'datum_platnosti', 'expiry_date', 'expiryDate', 'dátum platnosti', 'datum platnosti', 'dÃ¡tum_platnosti', 'dÃ¡tum platnosti', 'Valid_To'],
       emailAddress: ['email', 'email_address', 'emailAddress', 'Email'],
     };
 
@@ -188,17 +188,26 @@ export async function POST(request: NextRequest) {
         const dateColumn = findColumn(row, columnMappings.expiryDate);
         const emailColumn = findColumn(row, columnMappings.emailAddress);
 
-        if (!nameColumn || !dateColumn || !emailColumn) {
+        if (!nameColumn || !dateColumn) {
           errors.push({
             row: rowNumber,
-            error: 'Nepodarilo sa nájsť všetky požadované stĺpce (názov, dátum_platnosti, email)',
+            error: 'Nepodarilo sa nájsť požadované stĺpce (názov, dátum_platnosti)',
           });
           continue;
         }
 
         // BEZPEČNOSŤ: Sanitizácia vstupov
         const name = sanitizeString(row[nameColumn]);
-        const emailAddress = sanitizeString(row[emailColumn]);
+        let emailAddress: string | null = null;
+
+        // Spracovanie emailu - môže byť prázdny alebo "EMPTY"
+        if (emailColumn && row[emailColumn]) {
+          const rawEmail = sanitizeString(row[emailColumn]);
+          if (rawEmail && rawEmail.toUpperCase() !== 'EMPTY') {
+            emailAddress = rawEmail;
+          }
+        }
+
         const expiryDate = parseDate(row[dateColumn]);
 
         // Validácia dĺžky
@@ -207,7 +216,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        if (emailAddress.length > 255) {
+        if (emailAddress && emailAddress.length > 255) {
           errors.push({ row: rowNumber, error: 'Email je príliš dlhý (max 255 znakov)' });
           continue;
         }
@@ -223,7 +232,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        if (!emailRegex.test(emailAddress)) {
+        // Validácia emailu len ak je vyplnený
+        if (emailAddress && !emailRegex.test(emailAddress)) {
           errors.push({ row: rowNumber, error: 'Neplatná emailová adresa' });
           continue;
         }
@@ -233,7 +243,7 @@ export async function POST(request: NextRequest) {
           data: {
             name,
             expiryDate,
-            emailAddress,
+            ...(emailAddress && { emailAddress }),
           },
         });
 
@@ -255,7 +265,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Chyba pri importe súboru:', error);
-    
+
     // Bezpečnostné chybové hlášky
     if (error.message?.includes('timeout')) {
       return NextResponse.json(
@@ -263,7 +273,7 @@ export async function POST(request: NextRequest) {
         { status: 408 }
       );
     }
-    
+
     if (error.message?.includes('Nebezpečný obsah')) {
       return NextResponse.json(
         { error: 'Súbor obsahuje potenciálne nebezpečný obsah' },

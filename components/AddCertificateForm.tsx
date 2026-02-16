@@ -7,7 +7,7 @@ interface Certificate {
   id?: number;
   name: string;
   expiryDate: string;
-  emailAddress: string;
+  emailAddress: string | null;
 }
 
 interface AddCertificateFormProps {
@@ -39,7 +39,7 @@ export default function AddCertificateForm({
       setFormData({
         name: editCertificate.name,
         expiryDate: formattedDate,
-        emailAddress: editCertificate.emailAddress,
+        emailAddress: editCertificate.emailAddress || '',
       });
     }
   }, [editCertificate]);
@@ -58,16 +58,14 @@ export default function AddCertificateForm({
       const selectedDate = new Date(formData.expiryDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate < today) {
         newErrors.expiryDate = 'Dátum expirácie nemôže byť v minulosti';
       }
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.emailAddress.trim()) {
-      newErrors.emailAddress = 'Email je povinný';
-    } else if (!emailRegex.test(formData.emailAddress)) {
+    if (formData.emailAddress.trim() && !emailRegex.test(formData.emailAddress)) {
       newErrors.emailAddress = 'Neplatná emailová adresa';
     }
 
@@ -150,11 +148,10 @@ export default function AddCertificateForm({
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.name
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                  }`}
                 placeholder="napr. SSL Certifikát - www.example.com"
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -171,11 +168,10 @@ export default function AddCertificateForm({
                 name="expiryDate"
                 value={formData.expiryDate}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.expiryDate
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.expiryDate
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                  }`}
               />
               {errors.expiryDate && (
                 <p className="mt-1 text-sm text-red-600">{errors.expiryDate}</p>
@@ -185,7 +181,7 @@ export default function AddCertificateForm({
             {/* Email */}
             <div>
               <label htmlFor="emailAddress" className="block text-sm font-medium text-gray-700 mb-1">
-                Emailová adresa <span className="text-red-500">*</span>
+                Emailová adresa <span className="text-gray-400 text-xs">(voliteľné)</span>
               </label>
               <input
                 type="email"
@@ -193,12 +189,11 @@ export default function AddCertificateForm({
                 name="emailAddress"
                 value={formData.emailAddress}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.emailAddress
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.emailAddress
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500'
-                }`}
-                placeholder="napr. admin@example.com"
+                  }`}
+                placeholder="napr. admin@example.com (nepovinné)"
               />
               {errors.emailAddress && (
                 <p className="mt-1 text-sm text-red-600">{errors.emailAddress}</p>
@@ -210,11 +205,10 @@ export default function AddCertificateForm({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex-1 px-4 py-2 rounded-lg text-white font-medium ${
-                  isSubmitting
+                className={`flex-1 px-4 py-2 rounded-lg text-white font-medium ${isSubmitting
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                  }`}
               >
                 {isSubmitting ? 'Ukladám...' : editCertificate ? 'Uložiť zmeny' : 'Pridať certifikát'}
               </button>
