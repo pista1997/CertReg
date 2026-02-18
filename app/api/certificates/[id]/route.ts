@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helper';
 
 /**
  * DELETE /api/certificates/[id]
@@ -9,6 +10,12 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  // Kontrola autentifikácie
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const params = await context.params;
     const id = parseInt(params.id);
@@ -59,11 +66,17 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  // Kontrola autentifikácie
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const params = await context.params;
     const id = parseInt(params.id);
     const body = await request.json();
-    const { name, expiryDate, emailAddress } = body;
+    const { name, validFrom, expiryDate, emailAddress } = body;
 
     // Kontrola či ID je číslo
     if (isNaN(id)) {
@@ -74,9 +87,25 @@ export async function PUT(
     }
 
     // Validácia vstupných údajov
-    if (!name || !expiryDate) {
+    if (!name || !validFrom || !expiryDate) {
       return NextResponse.json(
-        { error: 'Názov a dátum expirácie sú povinné' },
+        { error: 'Názov, dátum platnosti od a dátum expirácie sú povinné' },
+        { status: 400 }
+      );
+    }
+
+    const validFromDate = new Date(validFrom);
+    const expiry = new Date(expiryDate);
+    if (isNaN(validFromDate.getTime()) || isNaN(expiry.getTime())) {
+      return NextResponse.json(
+        { error: 'Neplatný dátum platnosti' },
+        { status: 400 }
+      );
+    }
+
+    if (validFromDate > expiry) {
+      return NextResponse.json(
+        { error: 'Dátum platnosti od nemôže byť po dátume expirácie' },
         { status: 400 }
       );
     }
@@ -107,7 +136,8 @@ export async function PUT(
       where: { id },
       data: {
         name,
-        expiryDate: new Date(expiryDate),
+        validFrom: validFromDate,
+        expiryDate: expiry,
         emailAddress: emailAddress && emailAddress.trim() ? emailAddress.trim() : null,
         notificationSent: false, // Reset notifikácie pri zmene dátumu
       },

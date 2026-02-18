@@ -13,9 +13,18 @@ datasource db {
 model Certificate {
   id               Int      @id @default(autoincrement())
   name             String
+  validFrom        DateTime @default(now())
   expiryDate       DateTime
   emailAddress     String?
+  thumbprint       String?
   notificationSent Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
 }

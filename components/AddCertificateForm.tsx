@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 interface Certificate {
   id?: number;
   name: string;
+  validFrom: string;
   expiryDate: string;
   emailAddress: string | null;
 }
@@ -23,6 +24,7 @@ export default function AddCertificateForm({
 }: AddCertificateFormProps) {
   const [formData, setFormData] = useState({
     name: '',
+    validFrom: '',
     expiryDate: '',
     emailAddress: '',
   });
@@ -38,6 +40,7 @@ export default function AddCertificateForm({
 
       setFormData({
         name: editCertificate.name,
+        validFrom: format(new Date(editCertificate.validFrom), 'yyyy-MM-dd'),
         expiryDate: formattedDate,
         emailAddress: editCertificate.emailAddress || '',
       });
@@ -61,6 +64,16 @@ export default function AddCertificateForm({
 
       if (selectedDate < today) {
         newErrors.expiryDate = 'Dátum expirácie nemôže byť v minulosti';
+      }
+    }
+
+    if (!formData.validFrom) {
+      newErrors.validFrom = 'Dátum platnosti od je povinný';
+    } else if (formData.expiryDate) {
+      const validFromDate = new Date(formData.validFrom);
+      const expiryDate = new Date(formData.expiryDate);
+      if (validFromDate > expiryDate) {
+        newErrors.validFrom = 'Dátum platnosti od nemôže byť po dátume expirácie';
       }
     }
 
@@ -105,7 +118,7 @@ export default function AddCertificateForm({
       }
 
       // Reset formulára
-      setFormData({ name: '', expiryDate: '', emailAddress: '' });
+      setFormData({ name: '', validFrom: '', expiryDate: '', emailAddress: '' });
       setErrors({});
 
       // Callback pre úspech
@@ -149,12 +162,33 @@ export default function AddCertificateForm({
                 value={formData.name}
                 onChange={handleChange}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-blue-500'
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
                   }`}
                 placeholder="napr. SSL Certifikát - www.example.com"
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            </div>
+
+            {/* Dátum platnosti od */}
+            <div>
+              <label htmlFor="validFrom" className="block text-sm font-medium text-gray-700 mb-1">
+                Dátum platnosti od <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                id="validFrom"
+                name="validFrom"
+                value={formData.validFrom}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.validFrom
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.validFrom && (
+                <p className="mt-1 text-sm text-red-600">{errors.validFrom}</p>
+              )}
             </div>
 
             {/* Dátum expirácie */}
@@ -169,8 +203,8 @@ export default function AddCertificateForm({
                 value={formData.expiryDate}
                 onChange={handleChange}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.expiryDate
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-blue-500'
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
                   }`}
               />
               {errors.expiryDate && (
@@ -190,8 +224,8 @@ export default function AddCertificateForm({
                 value={formData.emailAddress}
                 onChange={handleChange}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.emailAddress
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-blue-500'
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
                   }`}
                 placeholder="napr. admin@example.com (nepovinné)"
               />
@@ -206,8 +240,8 @@ export default function AddCertificateForm({
                 type="submit"
                 disabled={isSubmitting}
                 className={`flex-1 px-4 py-2 rounded-lg text-white font-medium ${isSubmitting
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
                   }`}
               >
                 {isSubmitting ? 'Ukladám...' : editCertificate ? 'Uložiť zmeny' : 'Pridať certifikát'}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from '@/components/SessionProvider';
 
 export const metadata: Metadata = {
   title: "CertReg IS OS SR",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="sk">
       <body>
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

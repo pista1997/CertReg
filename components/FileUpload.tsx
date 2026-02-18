@@ -108,11 +108,10 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleButtonClick}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragging
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging
             ? 'border-blue-500 bg-blue-50'
             : 'border-gray-300 hover:border-gray-400 bg-gray-50'
-        }`}
+          }`}
       >
         <input
           ref={fileInputRef}
@@ -155,11 +154,10 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
       {/* Výsledok uploadu */}
       {uploadResult && (
         <div
-          className={`mt-4 p-4 rounded-lg ${
-            uploadResult.error
+          className={`mt-4 p-4 rounded-lg ${uploadResult.error
               ? 'bg-red-50 border border-red-200'
               : 'bg-green-50 border border-green-200'
-          }`}
+            }`}
         >
           {uploadResult.error ? (
             <div className="flex items-start">
@@ -210,14 +208,21 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
         </p>
         <ul className="text-sm text-blue-700 list-disc list-inside">
           <li>
-            <strong>názov</strong> alebo <strong>name</strong> - názov certifikátu
+            <strong>CN</strong> - názov certifikátu
           </li>
           <li>
-            <strong>dátum_platnosti</strong> alebo <strong>expiry_date</strong> - dátum
+            <strong>Valid_From</strong> alebo <strong>Valid_from</strong> - dátum
+            začiatku platnosti (DD.MM.YYYY alebo YYYY-MM-DD)
+          </li>
+          <li>
+            <strong>Valid_To</strong> alebo <strong>Valid_to</strong> - dátum
             expirácie (DD.MM.YYYY alebo YYYY-MM-DD)
           </li>
           <li>
-            <strong>email</strong> alebo <strong>email_address</strong> - emailová adresa
+            <strong>Email</strong> alebo <strong>email</strong> - emailová adresa
+          </li>
+          <li>
+            <strong>Thumbprint</strong> alebo <strong>thumbprint</strong> - digitálny odtlačok (thumbprint)
           </li>
         </ul>
       </div>

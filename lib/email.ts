@@ -1,16 +1,29 @@
 import nodemailer from 'nodemailer';
 import { format } from 'date-fns';
+import fs from 'fs';
 
-// Konfigurácia SMTP transportéra
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false, // true pre port 465, false pre ostatné porty
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Lazy loading transportéra - vytvorí sa až pri prvom použití
+let transporter: any = null;
+
+function getTransporter() {
+  if (!transporter) {
+    const tlsConfig = process.env.SMTP_CA_CERT && fs.existsSync(process.env.SMTP_CA_CERT)
+      ? { ca: [fs.readFileSync(process.env.SMTP_CA_CERT)] }
+      : undefined;
+
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: false, // true pre port 465, false pre ostatné porty
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: tlsConfig
+    });
+  }
+  return transporter;
+}
 
 interface EmailData {
   certificateName: string;
@@ -34,7 +47,7 @@ export async function sendExpiryNotification(data: EmailData): Promise<EmailResu
   const formattedDate = format(expiryDate, 'dd.MM.yyyy');
 
   // Email predmet
-  const subject = `⚠️ Certifikát čoskoro expiruje - ${certificateName}`;
+  const subject = `⚠️ Certifikát čoskoro expiruje - ${certificateName} [MO SR NEUTAJOVANE]`;
 
   // Email telo v HTML formáte
   const htmlContent = `
@@ -96,7 +109,7 @@ Certificate Registry System
 
   try {
     // Odoslanie emailu
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: process.env.SMTP_FROM,
       to: recipientEmail,
       subject: subject,
@@ -118,7 +131,7 @@ Certificate Registry System
  */
 export async function verifyEmailConfig(): Promise<boolean> {
   try {
-    await transporter.verify();
+    await getTransporter().verify();
     console.log('SMTP konfigurácia je v poriadku');
     return true;
   } catch (error) {

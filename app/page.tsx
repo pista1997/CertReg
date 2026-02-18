@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import CertificateTable from '@/components/CertificateTable';
 import FileUpload from '@/components/FileUpload';
 import AddCertificateForm from '@/components/AddCertificateForm';
@@ -8,12 +9,15 @@ import AddCertificateForm from '@/components/AddCertificateForm';
 interface Certificate {
   id: number;
   name: string;
+  validFrom: string;
   expiryDate: string;
-  emailAddress: string;
+  emailAddress: string | null;
+  thumbprint?: string | null;
   notificationSent: boolean;
 }
 
 export default function Home() {
+  const { data: session } = useSession();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -96,12 +100,36 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
       <header className="bg-blue-600 text-white shadow-lg">
         <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold">📜 Register certifikátov</h1>
-          <p className="text-blue-100 mt-1">Správa a monitoring certifikátov informačných systémov OS SR</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">📜 Register certifikátov</h1>
+              <p className="text-blue-100 mt-1">Správa a monitoring certifikátov informačných systémov OS SR</p>
+            </div>
+            {session ? (
+              <div className="flex items-center gap-4">
+                <span className="text-blue-100">👤 {session.user?.name}</span>
+                <button
+                  onClick={() => signOut()}
+                  className="bg-blue-500 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Odhlásiť sa
+                </button>
+              </div>
+            ) : (
+              <div>
+                <a
+                  href="/login"
+                  className="bg-blue-500 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors inline-block"
+                >
+                  Prihlásiť
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -123,21 +151,25 @@ export default function Home() {
       )}
 
       {/* Hlavný obsah */}
-      <div className="container mx-auto px-4 py-8">
-        {/* Tlačidlo pre pridanie certifikátu */}
-        <div className="mb-6">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-md transition-colors"
-          >
-            ➕ Pridať nový certifikát
-          </button>
-        </div>
+      <div className="container mx-auto px-4 py-8 flex-grow">
+        {/* Tlačidlo pre pridanie certifikátu - len pre prihlásených */}
+        {session && (
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-md transition-colors"
+            >
+              ➕ Pridať nový certifikát
+            </button>
+          </div>
+        )}
 
-        {/* Upload sekcia */}
-        <div className="mb-8">
-          <FileUpload onUploadSuccess={handleUploadSuccess} />
-        </div>
+        {/* Upload sekcia - len pre prihlásených */}
+        {session && (
+          <div className="mb-8">
+            <FileUpload onUploadSuccess={handleUploadSuccess} />
+          </div>
+        )}
 
         {/* Tabuľka certifikátov */}
         {loading ? (
@@ -164,7 +196,7 @@ export default function Home() {
       )}
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white mt-12">
+      <footer className="bg-gray-800 text-white mt-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center">
             <p className="text-sm text-gray-400">

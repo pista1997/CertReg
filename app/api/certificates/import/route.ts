@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helper';
 import * as XLSX from 'xlsx';
 
 // Bezpečnostné nastavenia pre ochranu proti ReDoS a Prototype Pollution
@@ -17,6 +18,12 @@ const PROCESSING_TIMEOUT = 30000; // 30 sekúnd timeout
  * - Timeout ochrany (30s)
  */
 export async function POST(request: NextRequest) {
+  // Kontrola autentifikácie
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -101,9 +108,11 @@ export async function POST(request: NextRequest) {
 
     // Mapovanie stĺpcov (podporuje rôzne názvy a encoding problémy)
     const columnMappings = {
-      name: ['názov', 'name', 'nazov', 'Názov', 'Name', 'nÃ¡zov', 'nÃ¡zov', "CN"],
-      expiryDate: ['dátum_platnosti', 'datum_platnosti', 'expiry_date', 'expiryDate', 'dátum platnosti', 'datum platnosti', 'dÃ¡tum_platnosti', 'dÃ¡tum platnosti', 'Valid_To'],
-      emailAddress: ['email', 'email_address', 'emailAddress', 'Email'],
+      name: ["CN"],
+      validFrom: ['Valid_From', 'Valid_from'],
+      expiryDate: ['Valid_To', 'Valid_to'],
+      emailAddress: ['email', 'Email'],
+      thumbprint: ['thumbprint', 'Thumbprint'],
     };
 
     // Funkcia pre nájdenie správneho názvu stĺpca
@@ -174,8 +183,10 @@ export async function POST(request: NextRequest) {
     // Validácia emailovej adresy
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // VYMAZAŤ VŠETKY EXISTUJÚCE ZÁZNAMY PRED IMPORTOM
-    await prisma.certificate.deleteMany({});
+    // VYMAZAŤ LEN IMPORTOVANÉ ZÁZNAMY (s thumbprint) PRED IMPORTOM
+    await prisma.certificate.deleteMany({
+      where: { thumbprint: { not: null } },
+    });
 
     // Spracovanie každého riadku
     for (let i = 0; i < data.length; i++) {
@@ -185,19 +196,28 @@ export async function POST(request: NextRequest) {
       try {
         // Nájdenie stĺpcov
         const nameColumn = findColumn(row, columnMappings.name);
+        const validFromColumn = findColumn(row, columnMappings.validFrom);
         const dateColumn = findColumn(row, columnMappings.expiryDate);
         const emailColumn = findColumn(row, columnMappings.emailAddress);
+        const thumbprintColumn = findColumn(row, columnMappings.thumbprint);
 
-        if (!nameColumn || !dateColumn) {
+        // Kontrola chýbajúcich stĺpcov
+        const missingColumns = [];
+        if (!nameColumn) missingColumns.push('názov');
+        if (!validFromColumn) missingColumns.push('platny_od');
+        if (!dateColumn) missingColumns.push('dátum_platnosti');
+        if (!thumbprintColumn) missingColumns.push('thumbprint');
+
+        if (missingColumns.length > 0) {
           errors.push({
             row: rowNumber,
-            error: 'Nepodarilo sa nájsť požadované stĺpce (názov, dátum_platnosti)',
+            error: `Chýbajúce stĺpce: ${missingColumns.join(', ')}`,
           });
           continue;
         }
 
         // BEZPEČNOSŤ: Sanitizácia vstupov
-        const name = sanitizeString(row[nameColumn]);
+        const name = sanitizeString(row[nameColumn!]);
         let emailAddress: string | null = null;
 
         // Spracovanie emailu - môže byť prázdny alebo "EMPTY"
@@ -208,7 +228,9 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const expiryDate = parseDate(row[dateColumn]);
+        const validFrom = parseDate(row[validFromColumn!]);
+        const expiryDate = parseDate(row[dateColumn!]);
+        const thumbprint = sanitizeString(row[thumbprintColumn!]);
 
         // Validácia dĺžky
         if (name.length > 500) {
@@ -227,8 +249,23 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        if (!validFrom) {
+          errors.push({ row: rowNumber, error: 'Nepodarilo sa parsovať dátum platnosti od' });
+          continue;
+        }
+
         if (!expiryDate) {
           errors.push({ row: rowNumber, error: 'Nepodarilo sa parsovať dátum' });
+          continue;
+        }
+
+        if (validFrom > expiryDate) {
+          errors.push({ row: rowNumber, error: 'Dátum platnosti od nemôže byť po dátume expirácie' });
+          continue;
+        }
+
+        if (!thumbprint) {
+          errors.push({ row: rowNumber, error: 'Chýba thumbprint' });
           continue;
         }
 
@@ -242,8 +279,10 @@ export async function POST(request: NextRequest) {
         const certificate = await prisma.certificate.create({
           data: {
             name,
+            validFrom,
             expiryDate,
             ...(emailAddress && { emailAddress }),
+            thumbprint,
           },
         });
 

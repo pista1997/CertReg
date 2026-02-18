@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
 
 interface Certificate {
   id: number;
   name: string;
+  validFrom: string;
   expiryDate: string;
-  emailAddress: string;
+  emailAddress: string | null;
+  thumbprint?: string | null;
   notificationSent: boolean;
 }
 
@@ -22,8 +25,9 @@ export default function CertificateTable({
   onEdit,
   onDelete,
 }: CertificateTableProps) {
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired' | 'manual'>('all');
 
   // Funkcia pre určenie statusu certifikátu
   const getStatus = (expiryDate: string) => {
@@ -42,13 +46,17 @@ export default function CertificateTable({
 
   // Filtrovanie certifikátov
   const filteredCertificates = certificates.filter((cert) => {
+    const emailValue = cert.emailAddress || '';
+    const thumbprintValue = cert.thumbprint || '';
     const matchesSearch =
       cert.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.emailAddress.toLowerCase().includes(searchTerm.toLowerCase());
+      emailValue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      thumbprintValue.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (!matchesSearch) return false;
 
     if (filter === 'all') return true;
+    if (filter === 'manual') return !cert.thumbprint;
 
     const status = getStatus(cert.expiryDate);
     if (filter === 'active') return status.label === 'Aktívny';
@@ -82,6 +90,7 @@ export default function CertificateTable({
             <option value="active">Aktívne</option>
             <option value="expiring">Expirujú čoskoro</option>
             <option value="expired">Expirované</option>
+            <option value="manual">Manuálne pridané</option>
           </select>
         </div>
       </div>
@@ -95,10 +104,16 @@ export default function CertificateTable({
                 Názov
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Platný od
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Dátum expirácie
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Thumbprint
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -111,13 +126,14 @@ export default function CertificateTable({
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredCertificates.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                   Žiadne certifikáty neboli nájdené
                 </td>
               </tr>
             ) : (
               filteredCertificates.map((cert) => {
                 const status = getStatus(cert.expiryDate);
+                const formattedValidFrom = format(new Date(cert.validFrom), 'dd.MM.yyyy');
                 const formattedDate = format(new Date(cert.expiryDate), 'dd.MM.yyyy');
 
                 return (
@@ -126,10 +142,16 @@ export default function CertificateTable({
                       <div className="text-sm font-medium text-gray-900">{cert.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{formattedValidFrom}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{formattedDate}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{cert.emailAddress}</div>
+                      <div className="text-sm text-gray-900">{cert.emailAddress || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{cert.thumbprint || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -139,26 +161,32 @@ export default function CertificateTable({
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => onEdit(cert)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        Upraviť
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Naozaj chcete zmazať certifikát "${cert.name}"?`
-                            )
-                          ) {
-                            onDelete(cert.id);
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Zmazať
-                      </button>
+                      {session ? (
+                        <>
+                          <button
+                            onClick={() => onEdit(cert)}
+                            className="text-blue-600 hover:text-blue-900 mr-4"
+                          >
+                            Upraviť
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Naozaj chcete zmazať certifikát "${cert.name}"?`
+                                )
+                              ) {
+                                onDelete(cert.id);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Zmazať
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">Len na čítanie</span>
+                      )}
                     </td>
                   </tr>
                 );

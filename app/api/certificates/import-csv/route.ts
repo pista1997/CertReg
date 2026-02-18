@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helper';
 import { parse } from 'csv-parse/sync';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -11,6 +12,12 @@ const MAX_ROWS = 1000;
  * Eliminuje všetky známe xlsx zraniteľnosti
  */
 export async function POST(request: NextRequest) {
+  // Kontrola autentifikácie
+  const authResult = await requireAuth();
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -62,9 +69,11 @@ export async function POST(request: NextRequest) {
     }
 
     const columnMappings = {
-      name: ['názov', 'name', 'nazov'],
-      expiryDate: ['dátum_platnosti', 'datum_platnosti', 'expiry_date', 'expiryDate'],
-      emailAddress: ['email', 'email_address', 'emailAddress'],
+      name: ["CN"],
+      validFrom: ['Valid_From', 'Valid_from'],
+      expiryDate: ['Valid_To', 'Valid_to'],
+      emailAddress: ['email', 'Email'],
+      thumbprint: ['thumbprint', 'Thumbprint'],
     };
 
     const findColumn = (record: any, possibleNames: string[]): string | null => {
@@ -103,24 +112,39 @@ export async function POST(request: NextRequest) {
     const errors = [];
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // VYMAZAŤ VŠETKY EXISTUJÚCE ZÁZNAMY PRED IMPORTOM
-    await prisma.certificate.deleteMany({});
+    // VYMAZAŤ LEN IMPORTOVANÉ ZÁZNAMY (s thumbprint) PRED IMPORTOM
+    await prisma.certificate.deleteMany({
+      where: { thumbprint: { not: null } },
+    });
 
     for (let i = 0; i < records.length; i++) {
       const rec = records[i];
       const row = i + 2;
 
       try {
-        const nameCol = findColumn(rec, columnMappings.name);
-        const dateCol = findColumn(rec, columnMappings.expiryDate);
-        const emailCol = findColumn(rec, columnMappings.emailAddress);
+        // Nájdenie stĺpcov
+        const nameCol = findColumn(row, columnMappings.name);
+        const validFromCol = findColumn(row, columnMappings.validFrom);
+        const dateCol = findColumn(row, columnMappings.expiryDate);
+        const emailCol = findColumn(row, columnMappings.emailAddress);
+        const thumbprintCol = findColumn(row, columnMappings.thumbprint);
 
-        if (!nameCol || !dateCol) {
-          errors.push({ row, error: 'Chýbajúce stĺpce (názov, dátum)' });
+        // Kontrola chýbajúcich stĺpcov
+        const missingColumns = [];
+        if (!nameCol) missingColumns.push('názov');
+        if (!validFromCol) missingColumns.push('platny_od');
+        if (!dateCol) missingColumns.push('dátum_platnosti');
+        if (!thumbprintCol) missingColumns.push('thumbprint');
+
+        if (missingColumns.length > 0) {
+          errors.push({
+            row: row,
+            error: `Chýbajúce stĺpce: ${missingColumns.join(', ')}`,
+          });
           continue;
         }
 
-        const name = sanitize(rec[nameCol]);
+        const name = sanitize(rec[nameCol!]);
         let email: string | null = null;
 
         // Spracovanie emailu - môže byť prázdny alebo "EMPTY"
@@ -131,7 +155,9 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const date = parseDate(rec[dateCol]);
+        const validFrom = parseDate(rec[validFromCol!]);
+        const date = parseDate(rec[dateCol!]);
+        const thumbprint = sanitize(rec[thumbprintCol!]);
 
         if (!name || name.length > 500) {
           errors.push({ row, error: 'Neplatný názov' });
@@ -143,13 +169,28 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        if (!validFrom) {
+          errors.push({ row, error: 'Neplatný dátum platnosti od' });
+          continue;
+        }
+
         if (!date) {
           errors.push({ row, error: 'Neplatný dátum' });
           continue;
         }
 
+        if (validFrom > date) {
+          errors.push({ row, error: 'Dátum platnosti od nemôže byť po dátume expirácie' });
+          continue;
+        }
+
+        if (!thumbprint) {
+          errors.push({ row, error: 'Chýba thumbprint' });
+          continue;
+        }
+
         const cert = await prisma.certificate.create({
-          data: { name, expiryDate: date, emailAddress: email },
+          data: { name, validFrom, expiryDate: date, emailAddress: email, thumbprint },
         });
         imported.push(cert);
       } catch (err: any) {

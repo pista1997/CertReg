@@ -5,6 +5,7 @@ Webová aplikácia pre správu a monitoring certifikátov s automatickými email
 ## 🎯 Popis projektu
 
 Certificate Registry je Next.js 14 aplikácia s TypeScript, ktorá umožňuje:
+
 - **Správu certifikátov** - pridávanie, editácia a mazanie certifikátov
 - **Import z Excel/CSV** - hromadné nahrávanie certifikátov zo súborov
 - **Automatické notifikácie** - email upozornenia na certifikáty expirujúce do 30 dní
@@ -61,11 +62,13 @@ SMTP_PORT=587
 SMTP_USER=vas-email@gmail.com
 SMTP_PASS=vase-heslo-alebo-app-password
 SMTP_FROM=vas-email@gmail.com
+SMTP_CA_CERT=cesta-k-certifikatu-ak-ma-nodemailer-problem-s-citanim-rootCA
 ```
 
 #### Nastavenie Gmail SMTP
 
 Ak používate Gmail:
+
 1. Prejdite na https://myaccount.google.com/security
 2. Zapnite 2-Step Verification
 3. Vytvorte "App Password" pre aplikáciu
@@ -103,18 +106,20 @@ Aplikácia bude dostupná na: **http://localhost:3000**
 
 Súbor musí obsahovať tieto stĺpce:
 
-| názov | dátum_platnosti | email |
-|-------|----------------|-------|
-| SSL Certifikát - www.example.com | 2026-03-15 | admin@example.com |
-| API Certifikát | 15.03.2026 | devops@example.com |
-| Doménový certifikát | 31/12/2026 | it@example.com |
+| názov                            | dátum_platnosti | email              |
+| -------------------------------- | --------------- | ------------------ |
+| SSL Certifikát - www.example.com | 2026-03-15      | admin@example.com  |
+| API Certifikát                   | 15.03.2026      | devops@example.com |
+| Doménový certifikát              | 31/12/2026      | it@example.com     |
 
 **Podporované názvy stĺpcov:**
+
 - **Názov**: `názov`, `name`, `nazov`
 - **Dátum**: `dátum_platnosti`, `datum_platnosti`, `expiry_date`, `expiryDate`
 - **Email**: `email`, `email_address`, `emailAddress`
 
 **Podporované formáty dátumu:**
+
 - `DD.MM.YYYY` (napr. 15.03.2026)
 - `DD/MM/YYYY` (napr. 15/03/2026)
 - `YYYY-MM-DD` (napr. 2026-03-15)
@@ -153,11 +158,13 @@ GET http://localhost:3000/api/certificates/check-expiry
 #### Linux / macOS (cron)
 
 Otvorte crontab editor:
+
 ```bash
 crontab -e
 ```
 
 Pridajte riadok pre dennú kontrolu o 9:00:
+
 ```bash
 0 9 * * * curl http://localhost:3000/api/certificates/check-expiry
 ```
@@ -167,13 +174,14 @@ Pridajte riadok pre dennú kontrolu o 9:00:
 1. Otvorte **Task Scheduler**
 2. Vytvorte **New Task**
 3. **Trigger**: Denné o 9:00
-4. **Action**: 
+4. **Action**:
    - Program: `curl`
    - Arguments: `http://localhost:3000/api/certificates/check-expiry`
 
 #### Docker / Kubernetes
 
 Pre produkčné prostredie odporúčame použiť:
+
 - **Kubernetes CronJob**
 - **Docker s crond**
 - **Externý monitoring službu** (napr. UptimeRobot, Pingdom)
@@ -201,9 +209,11 @@ Certificate Registry System
 ## 🔧 API Endpoints
 
 ### GET /api/certificates
+
 Vráti zoznam všetkých certifikátov.
 
 **Response:**
+
 ```json
 {
   "certificates": [
@@ -219,9 +229,11 @@ Vráti zoznam všetkých certifikátov.
 ```
 
 ### POST /api/certificates
+
 Vytvorí nový certifikát.
 
 **Body:**
+
 ```json
 {
   "name": "SSL Certifikát",
@@ -231,17 +243,21 @@ Vytvorí nový certifikát.
 ```
 
 ### PUT /api/certificates/[id]
+
 Aktualizuje existujúci certifikát.
 
 ### DELETE /api/certificates/[id]
+
 Zmaže certifikát podľa ID.
 
 ### POST /api/certificates/import
+
 Importuje certifikáty z Excel/CSV súboru.
 
 **Content-Type:** `multipart/form-data`
 
 ### GET /api/certificates/check-expiry
+
 Kontroluje expirujúce certifikáty a odošle email notifikácie.
 
 ## 🗂️ Štruktúra projektu
@@ -279,6 +295,7 @@ CertReg/
 **Problém:** Chyba pri spustení `npm run dev`
 
 **Riešenie:**
+
 ```bash
 # Vyčistite node_modules a cache
 rm -rf node_modules
@@ -294,12 +311,14 @@ npx prisma generate
 **Problém:** `Error: Environment variable not found: DATABASE_URL`
 
 **Riešenie:**
+
 - Overte, že existuje súbor `.env` v koreňovom priečinku
 - Skontrolujte, či `.env` obsahuje `DATABASE_URL="file:./dev.db"`
 
 **Problém:** `Table 'Certificate' does not exist`
 
 **Riešenie:**
+
 ```bash
 npx prisma db push
 ```
@@ -309,10 +328,12 @@ npx prisma db push
 **Problém:** Emailové notifikácie nefungujú
 
 **Riešenie:**
+
 1. Overte SMTP nastavenia v `.env` súbore
 2. Pre Gmail použite App Password, nie bežné heslo
 3. Skontrolujte firewall a port 587
 4. Otestujte SMTP pripojenie:
+
 ```bash
 curl http://localhost:3000/api/certificates/check-expiry
 ```
@@ -322,6 +343,7 @@ curl http://localhost:3000/api/certificates/check-expiry
 **Problém:** Chyba pri importe súboru
 
 **Riešenie:**
+
 - Skontrolujte, či súbor obsahuje správne názvy stĺpcov
 - Overte formát dátumu (DD.MM.YYYY alebo YYYY-MM-DD)
 - Skontrolujte, či emailové adresy sú validné
@@ -332,6 +354,7 @@ curl http://localhost:3000/api/certificates/check-expiry
 **Problém:** `npm run build` zlyháva
 
 **Riešenie:**
+
 ```bash
 # Overte TypeScript chyby
 npm run lint
@@ -348,6 +371,7 @@ npm run build
 Aplikácia poskytuje **DYE možnosti** pre import certifikátov:
 
 #### 1. **CSV-only Import** (ODPORÚČANÉ pre produkciu) ✅
+
 - **Endpoint**: `POST /api/certificates/import-csv`
 - **Formát**: Iba `.csv` súbory
 - **Bezpečnosť**: ✅ Bez známych zraniteľností
@@ -355,6 +379,7 @@ Aplikácia poskytuje **DYE možnosti** pre import certifikátov:
 - **Status**: **Plne bezpečné riešenie**
 
 #### 2. **Excel/CSV Import** (S obmedzeným rizikom) ⚠️
+
 - **Endpoint**: `POST /api/certificates/import`
 - **Formát**: `.xlsx`, `.xls`, `.csv` súbory
 - **Bezpečnosť**: ⚠️ xlsx má známe zraniteľnosti (mitigované runtime ochranami)
@@ -364,11 +389,13 @@ Aplikácia poskytuje **DYE možnosti** pre import certifikátov:
 ### 🎯 Odporúčania
 
 **Pre produkčné prostredie:**
+
 1. ✅ Používajte **CSV-only import** (`/api/certificates/import-csv`)
 2. ✅ Exportujte Excel súbory do CSV pred importom
 3. ✅ V UI uprednostnite CSV upload pred Excel uploadom
 
 **Ak MUSÍTE podporovať Excel:**
+
 - Implementujte autentifikáciu a autorizáciu
 - Nastavte rate limiting (napr. 10 importov/hod na používateľa)
 - Monitorujte neúspešné pokusy o import
@@ -409,12 +436,14 @@ vercel
 #### ✅ RIEŠENIE: CSV-only Import (Bez xlsx)
 
 **Nový bezpečný endpoint bez xlsx závislosti:**
+
 - **POST /api/certificates/import-csv** - Používa `csv-parse` knižnicu
 - **Žiadne známe zraniteľnosti**
 - **Odporúčané pre všetky produkčné nasadenia**
 - **Plná funkcionalita importu bez bezpečnostných rizík**
 
 #### ⚠️ xlsx knižnica (Prototype Pollution, ReDoS)
+
 Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je k dispozícii opravená verzia.
 
 **Stav:** Endpoint `/api/certificates/import` STÁLE používa xlsx pre Excel podporu.
@@ -429,6 +458,7 @@ Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je
 2. **Ak potrebujete Excel:** Použite `/api/certificates/import` s implementovanými ochranami
 
 **Implementované ochranné opatrenia v kóde:**
+
 - ✅ **File size limit**: Maximum 5MB (hardcoded v API)
 - ✅ **Row limit**: Maximum 1000 riadkov na import
 - ✅ **Timeout protection**: 30-sekundový timeout proti ReDoS
@@ -437,6 +467,7 @@ Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je
 - ✅ **Restricted parsing**: Obmedzené parsovanie možnosti xlsx knižnice
 
 **Dodatočné odporúčania pre produkciu:**
+
 - Import súborov by mal byť prístupný len autentifikovaným používateľom
 - Monitorovať a obmedziť frekvenciu importov
 - Zvážiť alternatívne riešenia:
@@ -445,6 +476,7 @@ Knižnica `xlsx@0.18.5` má známe bezpečnostné zraniteľnosti. Zatiaľ nie je
   - Použiť dedikované API služby pre spracovanie Excel súborov
 
 #### Next.js a nodemailer
+
 - ✅ **Next.js aktualizovaný na v15.0.8+** (opravené DoS zraniteľnosti)
 - ✅ **nodemailer aktualizovaný na v7.0.7+** (opravené email domain issues)
 
